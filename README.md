@@ -1,1 +1,65 @@
-# youtube-download
+# YouTube Playlist Downloader
+
+Este é um script em Python que baixa playlists do YouTube em formato MP4 e MP3 enquanto adiciona metadados nos arquivos MP3 para facilitar a organização e categorização da sua biblioteca de músicas.
+
+## Requisitos
+
+- Python 3.x
+- Bibliotecas Python: pytube, tqdm, moviepy, mutagen
+
+Você pode instalar as dependências com o seguinte comando:
+
+```
+pip install -r requirements.txt
+```
+
+## Como Usar
+
+1. Clone este repositório para o seu ambiente local:
+
+```
+git clone https://github.com/protonnegativo/youtube-download.git
+```
+
+2. Navegue até o diretório do projeto:
+
+```
+cd youtube-download
+```
+
+3. Execute o script:
+
+```
+python runme.py
+```
+
+4. Quando solicitado, insira a URL da playlist do YouTube que você deseja baixar e pressione Enter.
+
+5. Os vídeos serão baixados e convertidos para MP3. Os arquivos serão salvos na pasta "downloads/{nome-da-playlist}", com subpastas "mp3" e "mp4" para os arquivos convertidos e originais, respectivamente.
+
+## Funcionalidades
+
+O script oferece as seguintes funcionalidades:
+
+1. **Download da Playlist do YouTube:** Baixa uma playlist do YouTube para a sua máquina.
+
+2. **Conversão para MP3:** Converte os vídeos da playlist para o formato MP3, permitindo que você os ouça offline.
+
+3. **Adição de Metadados nos Arquivos MP3:**
+   - **Número Sequencial:** Cada faixa MP3 recebe um número sequencial como metadado, indicando sua posição na playlist.
+   - **Título do Vídeo:** O título do vídeo do YouTube é adicionado como título da faixa MP3.
+   - **Artista Participante:** O nome do canal do YouTube que postou o vídeo é adicionado como artista participante.
+   - **Artista no Álbum:** É adicionado "Powered by Proton Negativo." como uma forma de facilitar a categorização no MusicBee. (pode ser alterado manualmente conforme necessário)
+   - **URL do Autor:** O link do vídeo do YouTube é adicionado como a URL do autor, incluindo o ano de publicação.
+   - **Nome da Playlist:** O nome da playlist é adicionado como metadado de álbum.
+   - **Ano de Publicação:** O ano de publicação do vídeo é adicionado como metadado.
+
+![Demonstração](./assets/demo.gif)
+
+## Uso com o MusicBee
+
+Este script é útil para baixar playlists do YouTube e importá-las para o MusicBee, um player de música popular. Ao converter os vídeos para MP3 e adicionar metadados, os arquivos resultantes podem ser facilmente importados para a biblioteca do MusicBee.
+
+## My MusicBee
+
+![Demonstração](./assets/image.png)
