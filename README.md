@@ -1,4 +1,5 @@
-# YouTube Playlist Downloader
+# YODA, Youtube Online Download Assistant
+### YouTube Playlist Downloader
 
 Este é um script em Python que baixa playlists do YouTube em formato MP4 e MP3 enquanto adiciona metadados nos arquivos MP3 para facilitar a organização e categorização da sua biblioteca de músicas.
 
@@ -18,7 +19,7 @@ pip install -r requirements.txt
 1. Clone este repositório para o seu ambiente local:
 
 ```
-git clone https://github.com/protonnegativo/youtube-download.git
+git clone https://github.com/protonnegativo/YODA.git
 ```
 
 2. Navegue até o diretório do projeto:
