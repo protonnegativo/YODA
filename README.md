@@ -25,7 +25,7 @@ git clone https://github.com/protonnegativo/YODA.git
 2. Navegue até o diretório do projeto:
 
 ```
-cd youtube-download
+cd YODA
 ```
 
 3. Execute o script:
