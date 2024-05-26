@@ -31,7 +31,7 @@ cd YODA
 3. Execute o script:
 
 ```
-python runme.py
+python run.py
 ```
 
 4. Quando solicitado, insira a URL da playlist do YouTube que você deseja baixar e pressione Enter.
