@@ -2,3 +2,4 @@ pytube>=15.0.0
 tqdm>=4.66.4
 moviepy>=1.0.3
 mutagen>=1.46.0
+eyed>=30.9.7
