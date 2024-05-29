@@ -64,3 +64,28 @@ Este script é útil para baixar playlists do YouTube e importá-las para o Musi
 ## My MusicBee
 
 ![Demonstração](./assets/image.png)
+
+# Roadmap
+
+- [x] Implementar funcionalidade para baixar playlists do YouTube.
+- [x] Converter vídeos baixados para MP3.
+- [x] Adicionar metadados do YouTube aos arquivos MP3 (título, artista, álbum, etc.).
+- [x] Suporte para salvar arquivos MP3 em pasta específica.
+- [x] Suporte para salvar arquivos MP4 em pasta específica.
+- [x] Coletar metadados do Spotify.
+- [x] Utilizar metadados do YouTube para auxiliar no filtro de busca de metadados no Spotify.
+- [ ] Alerta quando a chave da API do Spotify não for fornecida.
+- [ ] Adicionar opção para utilizar ou não o Spotify para adicionar metadados.
+- [ ] Documentação sobre como criar e adicionar a chave da API do Spotify.
+- [ ] Permitir ao usuário escolher entre baixar apenas MP3, apenas MP4 ou ambos.
+- [ ] Melhorar o tratamento de erros e mensagens de erro mais descritivas.
+- [ ] Implementar logging para registrar as ações do programa.
+- [ ] Adicionar suporte para baixar vídeos individuais do YouTube.
+- [ ] Implementar uma interface gráfica de usuário (GUI) para facilitar a interação com o programa.
+- [ ] Implementar testes automatizados para garantir a estabilidade do código.
+- [ ] Melhorar a eficiência do programa para downloads de grandes playlists.
+- [ ] Refatorar código para melhorar a legibilidade e manutenibilidade.
+- [ ] Mais fontes de metadados? Integração direta com MusicBee? ??
+
+## Como Contribuir
+Se você tiver ideias para novos recursos ou melhorias, sinta-se à vontade para abrir uma issue ou enviar um pull request! Estou aberto a contribuições e feedback da comunidade.
