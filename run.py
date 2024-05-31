@@ -48,33 +48,76 @@ def download_and_convert_video(video, idx, mp4_folder, mp3_folder, playlist_titl
     except Exception as e:
         print(f"Erro ao processar vídeo {video.title}: {e}")
 
-def main():
+def list_mp3_files(directory):
+    mp3_files = [f for f in os.listdir(directory) if f.endswith('.mp3')]
+    if mp3_files:
+        print("Arquivos MP3 encontrados:")
+        for idx, file in enumerate(mp3_files, start=1):
+            print(f"{idx}. {file}")
+    else:
+        print("Nenhum arquivo MP3 encontrado.")
+    return mp3_files
+
+def clean_file_names(directory, text_to_remove):
+    for filename in os.listdir(directory):
+        if filename.endswith('.mp3'):
+            new_name = filename.replace(text_to_remove, '')
+            if new_name != filename:
+                os.rename(os.path.join(directory, filename), os.path.join(directory, new_name))
+
+def baixar_playlist():
+    link_playlist = input("Insira a URL da playlist do YouTube (ou deixe em branco para pular): ").strip()
+    if not link_playlist:
+        print("Pulo da etapa de download.")
+        return None
+
+    playlist = Playlist(link_playlist)
+    playlist_title = playlist.title
+    download_folder = "downloads"
+
+    create_folder_if_not_exists(download_folder)
+    mp3_folder = os.path.join(download_folder, "mp3")
+    mp4_folder = os.path.join(download_folder, "mp4")
+    create_folder_if_not_exists(mp3_folder)
+    create_folder_if_not_exists(mp4_folder)
+
+    print(f"Baixando playlist: {playlist_title}")
+    for idx, video in enumerate(tqdm(playlist.videos, desc="Baixando vídeos"), start=1):
+        download_and_convert_video(video, idx, mp4_folder, mp3_folder, playlist_title)
+
+    print("Download, conversão para MP3, adição de metadados e salvamento na pasta concluídos!")
+    return mp3_folder
+
+def renomear_arquivos(mp3_folder):
+    while True:
+        mp3_files = list_mp3_files(mp3_folder)
+        if not mp3_files:
+            break
+
+        limpar = input("Você quer limpar algo dos nomes dos arquivos? (s/n): ").strip().lower()
+        if limpar == 's':
+            texto_a_remover = input("Digite o texto a ser removido dos nomes dos arquivos: ").strip()
+            clean_file_names(mp3_folder, texto_a_remover)
+            print("Renomeação concluída!")
+        else:
+            break
+
+def executar_spotify():
     global spotify_executado
+    if not spotify_executado:
+        import spotify
+        spotify.executar_funcao()
+        spotify_executado = True
+        print("A função do Spotify foi executada!")
+
+def main():
     try:
-        link_playlist = input("Insira a URL da playlist do YouTube: ")
-        playlist = Playlist(link_playlist)
-        playlist_title = playlist.title
-        download_folder = "downloads"
-
-        create_folder_if_not_exists(download_folder)
-        mp3_folder = os.path.join(download_folder, "mp3")
-        mp4_folder = os.path.join(download_folder, "mp4")
-        create_folder_if_not_exists(mp3_folder)
-        create_folder_if_not_exists(mp4_folder)
-
-        print(f"Baixando playlist: {playlist_title}")
-        for idx, video in enumerate(tqdm(playlist.videos, desc="Baixando vídeos"), start=1):
-            download_and_convert_video(video, idx, mp4_folder, mp3_folder, playlist_title)
-
-        print("Download, conversão para MP3, adição de metadados e salvamento na pasta concluídos!")
+        mp3_folder = baixar_playlist()
+        if mp3_folder or os.path.exists("downloads/mp3"):
+            renomear_arquivos(mp3_folder or "downloads/mp3")
+        executar_spotify()
     except Exception as e:
         print(f"Ocorreu um erro: {e}")
-    finally:
-        if not spotify_executado:
-            import spotify
-            spotify.executar_funcao()
-            spotify_executado = True
-            print("A função do Spotify foi executada!")
 
 def read_keys_file(file_path):
     current_dir = os.path.dirname(os.path.abspath(__file__))
