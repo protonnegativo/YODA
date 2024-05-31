@@ -30,27 +30,22 @@ class SpotifySong:
         self.collection_name = song["album"]["name"]
         self.artwork_url_100 = song["album"]["images"][0]["url"]
 
-def search_song_by_file_title(file_path: str, country: str = "US", limit: int = 1) -> SpotifySong:
+def search_song_by_file_title(file_path: str, artist: str = None, album: str = None, country: str = "US", limit: int = 1) -> SpotifySong:
     """
-    Pesquisa a música usando o título do arquivo de música e retorna os resultados.
-    Retorna None se não encontrar nenhum resultado.
+    Pesquisa a música usando o título do arquivo de música e, opcionalmente, o nome do artista e/ou nome do álbum,
+    e retorna os resultados. Retorna None se não encontrar nenhum resultado.
     """
     # Extrai o título do arquivo (sem extensão)
     file_name = os.path.basename(file_path)
     title = os.path.splitext(file_name)[0]
 
     try:
-        # Obtém o nome do artista do arquivo MP3
-        audiofile = eyed3.load(file_path)
-        if audiofile is None or audiofile.tag is None:
-            return None
-
-        artist = audiofile.tag.artist
-
-        # Constrói a consulta de busca incluindo o nome do artista, se disponível
+        # Constrói a consulta de busca incluindo o título e, opcionalmente, o nome do artista e/ou nome do álbum
         query = f"track:{title}"
         if artist:
             query += f" artist:{artist}"
+        if album:
+            query += f" album:{album}"
 
         spotify = Spotify(auth_manager=SpotifyClientCredentials(client_id=CLIENT_ID, client_secret=CLIENT_SECRET))
         response = spotify.search(query, limit=limit, type="track", market=country)
@@ -64,16 +59,14 @@ def search_song_by_file_title(file_path: str, country: str = "US", limit: int = 
 def executar_funcao():
     print("...")
 
-
 # Função para baixar a imagem a partir de uma URL e salvar como Cover.jpg
 def download_image(url: str, file_name: str) -> None:
     response = requests.get(url)
     with open(file_name, 'wb') as f:
         f.write(response.content)
 
-# Função para preencher os metadados em um arquivo MP3
 def fill_metadata(file_path: str, song: SpotifySong) -> None:
-    # Construir o novo caminho do arquivo com a pasta "../download/mp3/"
+    # Construir o novo caminho do arquivo com a pasta "../downloads/mp3/"
     new_file_path = os.path.join("/downloads/mp3/", os.path.basename(file_path))
     
     audiofile = eyed3.load(file_path)
@@ -83,20 +76,37 @@ def fill_metadata(file_path: str, song: SpotifySong) -> None:
     audiofile.tag.title = song.track_name
     audiofile.tag.artist = song.artist_name
     audiofile.tag.album = song.collection_name
+    audiofile.tag.band = song.artist_name  # Adicionando o metadado 'band'
+    audiofile.tag.album_artist = song.artist_name  # Adicionando o metadado 'artista do álbum'
+    
+    # Salvando a imagem na mesma pasta dos arquivos MP3
     image_file_name = "Cover.jpg"  # Nome do arquivo de imagem
-    download_image(song.artwork_url_100, image_file_name)
-    audiofile.tag.images.set(3, open(image_file_name, 'rb').read(), 'image/jpeg')
+    image_file_path = os.path.join(os.path.dirname(file_path), image_file_name)
+    download_image(song.artwork_url_100, image_file_path)
+    
+    # Carregando a imagem salva
+    with open(image_file_path, 'rb') as image_file:
+        image_data = image_file.read()
+    
+    # Adicionando a imagem aos metadados
+    audiofile.tag.images.set(3, image_data, 'image/jpeg')
+    
+    # Salvando os metadados
     audiofile.tag.save()
 
 # Exemplo de uso
 script_directory = os.path.dirname(__file__)
 mp3_folder = os.path.abspath(os.path.join(script_directory, "../downloads/mp3"))
 
+# Solicitar o nome do artista e do álbum uma vez
+artist = input("Digite o nome do artista (ou pressione Enter para pular): ").strip()
+album = input("Digite o nome do álbum (ou pressione Enter para pular): ").strip()
+
 print("\nPreenchendo metadados dos arquivos MP3...")
 for file_name in os.listdir(mp3_folder):
     if file_name.lower().endswith(".mp3"):
         file_path = os.path.join(mp3_folder, file_name)
-        resultado = search_song_by_file_title(file_path)
+        resultado = search_song_by_file_title(file_path, artist=artist if artist else None, album=album if album else None)
         if resultado:
             fill_metadata(file_path, resultado)
             print(f"Metadados preenchidos para o arquivo: {file_name}")
