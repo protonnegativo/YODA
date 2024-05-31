@@ -5,6 +5,8 @@ from tqdm import tqdm
 from mutagen.easyid3 import EasyID3
 import datetime
 from pydub import AudioSegment
+from urllib.error import HTTPError
+import time
 
 # Global variable to control if spotify.py has been executed
 spotify_executado = False
@@ -19,34 +21,40 @@ def create_folder_if_not_exists(folder_path):
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
 
-def download_and_convert_video(video, idx, mp4_folder, mp3_folder, playlist_title):
-    try:
-        # Download video
-        video.streams.get_highest_resolution().download(output_path=mp4_folder)
-        original_file_name = video.streams.get_highest_resolution().default_filename
-        mp4_path = os.path.join(mp4_folder, original_file_name)
-        os.rename(os.path.join(mp4_folder, original_file_name), mp4_path)
+def download_and_convert_video(video, idx, mp4_folder, mp3_folder, playlist_title, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            # Download video
+            video.streams.get_highest_resolution().download(output_path=mp4_folder)
+            original_file_name = video.streams.get_highest_resolution().default_filename
+            mp4_path = os.path.join(mp4_folder, original_file_name)
+            os.rename(os.path.join(mp4_folder, original_file_name), mp4_path)
 
-        # Convert to MP3
-        mp3_path = os.path.join(mp3_folder, original_file_name[:-4] + ".mp3")
-        audio = AudioSegment.from_file(mp4_path)
-        audio.export(mp3_path, format="mp3")
+            # Convert to MP3
+            mp3_path = os.path.join(mp3_folder, original_file_name[:-4] + ".mp3")
+            audio = AudioSegment.from_file(mp4_path)
+            audio.export(mp3_path, format="mp3")
 
-        # Add metadata
-        data_publicacao = obter_data_publicacao(video)
-        ano_publicacao = data_publicacao.year if data_publicacao else datetime.datetime.now().year
+            # Add metadata
+            data_publicacao = obter_data_publicacao(video)
+            ano_publicacao = data_publicacao.year if data_publicacao else datetime.datetime.now().year
 
-        audiofile = EasyID3(mp3_path)
-        audiofile['tracknumber'] = str(idx)
-        audiofile['title'] = video.title
-        audiofile['artist'] = video.author
-        audiofile['albumartist'] = "Powered by Proton Negativo."
-        audiofile['website'] = f"{video.watch_url}?year={ano_publicacao}"
-        audiofile['album'] = playlist_title
-        audiofile['date'] = str(ano_publicacao)
-        audiofile.save()
-    except Exception as e:
-        print(f"Erro ao processar vídeo {video.title}: {e}")
+            audiofile = EasyID3(mp3_path)
+            audiofile['tracknumber'] = str(idx)
+            audiofile['title'] = video.title
+            audiofile['artist'] = video.author
+            audiofile['albumartist'] = "Powered by Proton Negativo."
+            audiofile['website'] = f"{video.watch_url}?year={ano_publicacao}"
+            audiofile['album'] = playlist_title
+            audiofile['date'] = str(ano_publicacao)
+            audiofile.save()
+            break
+        except (HTTPError, OSError, Exception) as e:
+            print(f"Erro ao processar vídeo {video.title} (tentativa {attempt + 1} de {max_retries}): {e}")
+            if attempt + 1 == max_retries:
+                print(f"Falha ao baixar o vídeo {video.title} após {max_retries} tentativas.")
+            else:
+                time.sleep(5)  # Aguardar um tempo antes de tentar novamente
 
 def list_mp3_files(directory):
     mp3_files = [f for f in os.listdir(directory) if f.endswith('.mp3')]
