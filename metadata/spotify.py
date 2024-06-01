@@ -1,4 +1,5 @@
 import os
+import sys
 import requests
 import eyed3
 from spotipy import SpotifyClientCredentials, Spotify
@@ -14,7 +15,7 @@ def read_keys_file(file_path: str) -> Dict[str, str]:
     return keys
 
 # Caminho correto para o arquivo de chaves
-keys = read_keys_file("secret/key_spotify.txt")
+keys = read_keys_file(os.path.join(os.path.dirname(__file__), "..", "secret", "key_spotify.txt"))
 CLIENT_ID = keys.get("CLIENT_ID")
 CLIENT_SECRET = keys.get("CLIENT_SECRET")
 
@@ -66,9 +67,6 @@ def download_image(url: str, file_name: str) -> None:
         f.write(response.content)
 
 def fill_metadata(file_path: str, song: SpotifySong) -> None:
-    # Construir o novo caminho do arquivo com a pasta "../downloads/mp3/"
-    new_file_path = os.path.join("/downloads/mp3/", os.path.basename(file_path))
-    
     audiofile = eyed3.load(file_path)
     if audiofile.tag is None:
         audiofile.initTag()
@@ -94,22 +92,28 @@ def fill_metadata(file_path: str, song: SpotifySong) -> None:
     # Salvando os metadados
     audiofile.tag.save()
 
-# Exemplo de uso
-script_directory = os.path.dirname(__file__)
-mp3_folder = os.path.abspath(os.path.join(script_directory, "../downloads/mp3"))
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Uso: python spotify.py <nome_da_playlist>")
+        sys.exit(1)
 
-# Solicitar o nome do artista e do álbum uma vez
-artist = input("Digite o nome do artista (ou pressione Enter para pular): ").strip()
-album = input("Digite o nome do álbum (ou pressione Enter para pular): ").strip()
+    playlist_name = sys.argv[1]
 
-print("\nPreenchendo metadados dos arquivos MP3...")
-for file_name in os.listdir(mp3_folder):
-    if file_name.lower().endswith(".mp3"):
-        file_path = os.path.join(mp3_folder, file_name)
-        resultado = search_song_by_file_title(file_path, artist=artist if artist else None, album=album if album else None)
-        if resultado:
-            fill_metadata(file_path, resultado)
-            print(f"Metadados preenchidos para o arquivo: {file_name}")
-        else:
-            print(f"Não foi possível encontrar metadados para o arquivo: {file_name}")
-print("Metadados preenchidos com sucesso.")
+    script_directory = os.path.dirname(os.path.abspath(__file__))
+    mp3_folder = os.path.abspath(os.path.join(script_directory, f"../downloads/{playlist_name} mp3"))
+
+    # Solicitar o nome do artista e do álbum uma vez
+    artist = input("Digite o nome do artista (ou pressione Enter para pular): ").strip()
+    album = input("Digite o nome do álbum (ou pressione Enter para pular): ").strip()
+
+    print("\nPreenchendo metadados dos arquivos MP3...")
+    for file_name in os.listdir(mp3_folder):
+        if file_name.lower().endswith(".mp3"):
+            file_path = os.path.join(mp3_folder, file_name)
+            resultado = search_song_by_file_title(file_path, artist=artist if artist else None, album=album if album else None)
+            if resultado:
+                fill_metadata(file_path, resultado)
+                print(f"Metadados preenchidos para o arquivo: {file_name}")
+            else:
+                print(f"Não foi possível encontrar metadados para o arquivo: {file_name}")
+    print("Metadados preenchidos com sucesso.")
