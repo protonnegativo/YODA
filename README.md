@@ -77,6 +77,7 @@ Este script é útil para baixar playlists do YouTube e importá-las para o Musi
 - [x] Salvar Cover.jpg na pasta mp3.
 - [x] Adicional opção de limpar nomes antes de buscar metadados no Spotify.
 - [x] Alerta quando a chave da API do Spotify não for fornecida.
+- [ ] Opção de salvar configurações.
 - [ ] Adicionar opção para utilizar ou não o Spotify para adicionar metadados.
 - [ ] Documentação sobre como criar e adicionar a chave da API do Spotify.
 - [x] Permitir ao usuário escolher entre baixar apenas MP3, apenas MP4 ou ambos.
