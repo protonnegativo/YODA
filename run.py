@@ -8,6 +8,7 @@ from pydub import AudioSegment
 from urllib.error import HTTPError
 import time
 import subprocess
+import re
 
 # Global variable to control if spotify.py has been executed
 spotify_executado = False
@@ -17,6 +18,12 @@ sys.path.append(os.path.join(os.getcwd(), 'metadata'))
 
 def obter_data_publicacao(video):
     return video.publish_date
+
+def sanitize_folder_name(name):
+    invalid_chars = '<>:"/\\|?*'
+    for char in invalid_chars:
+        name = name.replace(char, '_')
+    return name
 
 def create_folder_if_not_exists(folder_path):
     if not os.path.exists(folder_path):
@@ -29,12 +36,10 @@ def download_video(video, folder):
 
 def convert_to_mp3(mp4_path, mp3_folder, idx, video, playlist_title):
     try:
-        # Convert to MP3
         mp3_path = os.path.join(mp3_folder, os.path.basename(mp4_path)[:-4] + ".mp3")
         audio = AudioSegment.from_file(mp4_path)
         audio.export(mp3_path, format="mp3")
 
-        # Add metadata
         data_publicacao = obter_data_publicacao(video)
         ano_publicacao = data_publicacao.year if data_publicacao else datetime.datetime.now().year
 
@@ -54,18 +59,15 @@ def download_and_convert_video(video, idx, mp4_folder, mp3_folder, playlist_titl
     for attempt in range(max_retries):
         try:
             mp4_path = None
-            if download_choice == 'mp4':
+            if download_choice in ['mp4', 'both']:
                 mp4_path = download_video(video, mp4_folder)
                 print(f"Vídeo {video.title} baixado como MP4.")
-            elif download_choice == 'mp3':
-                mp4_path = download_video(video, mp4_folder)
+            if download_choice in ['mp3', 'both']:
+                if not mp4_path:
+                    mp4_path = download_video(video, mp4_folder)
                 convert_to_mp3(mp4_path, mp3_folder, idx, video, playlist_title)
-                os.remove(mp4_path)  # Remove MP4 after conversion
-                print(f"Vídeo {video.title} convertido e baixado como MP3.")
-            elif download_choice == 'both':
-                mp4_path = download_video(video, mp4_folder)
-                print(f"Vídeo {video.title} baixado como MP4.")
-                convert_to_mp3(mp4_path, mp3_folder, idx, video, playlist_title)
+                if download_choice == 'mp3':
+                    os.remove(mp4_path)
                 print(f"Vídeo {video.title} convertido e baixado como MP3.")
             break
         except (HTTPError, OSError, Exception) as e:
@@ -73,7 +75,7 @@ def download_and_convert_video(video, idx, mp4_folder, mp3_folder, playlist_titl
             if attempt + 1 == max_retries:
                 print(f"Falha ao baixar o vídeo {video.title} após {max_retries} tentativas.")
             else:
-                time.sleep(5)  # Aguardar um tempo antes de tentar novamente
+                time.sleep(5)
 
 def list_mp3_files(directory):
     mp3_files = [f for f in os.listdir(directory) if f.endswith('.mp3')]
@@ -92,27 +94,40 @@ def clean_file_names(directory, text_to_remove):
             if new_name != filename:
                 os.rename(os.path.join(directory, filename), os.path.join(directory, new_name))
 
-def baixar_playlist(download_choice):
-    link_playlist = input("Insira a URL da playlist do YouTube (ou deixe em branco para pular): ").strip()
-    if not link_playlist:
-        print("Pulo da etapa de download.")
-        return None
+def is_valid_youtube_playlist(url):
+    pattern = re.compile(r'(https?://)?(www\.)?(youtube\.com|youtu\.?be)/playlist\?list=.*')
+    return pattern.match(url)
+
+def baixar_playlist(download_choice, link_playlist=None):
+    attempts = 0
+    while not link_playlist or not is_valid_youtube_playlist(link_playlist):
+        if attempts >= 3:
+            print("URL inválida inserida 3 vezes. Pulando a etapa de download.")
+            return None, None
+
+        if not link_playlist:
+            link_playlist = input("Insira a URL da playlist do YouTube (ou deixe em branco para pular): ").strip()
+        if not link_playlist:
+            print("Pulo da etapa de download.")
+            return None, None
+        if not is_valid_youtube_playlist(link_playlist):
+            print("URL inválida. Por favor, insira uma URL válida da playlist do YouTube.")
+            link_playlist = None
+            attempts += 1
 
     playlist = Playlist(link_playlist)
-    playlist_title = playlist.title
+    playlist_title = sanitize_folder_name(playlist.title)
     download_folder = "downloads"
 
-    # Creating playlist-specific folders
     mp3_folder = os.path.join(download_folder, f"{playlist_title} mp3")
     mp4_folder = os.path.join(download_folder, f"{playlist_title} mp4")
     create_folder_if_not_exists(mp3_folder)
     create_folder_if_not_exists(mp4_folder)
 
-    print(f"Baixando playlist: {playlist_title}")
+    print(f"Baixando playlist: {playlist.title}")
     for idx, video in enumerate(tqdm(playlist.videos, desc="Baixando vídeos"), start=1):
         download_and_convert_video(video, idx, mp4_folder, mp3_folder, playlist_title, download_choice)
 
-    # Remove unnecessary folders and files
     if download_choice == 'mp3':
         if os.path.exists(mp4_folder):
             for file in os.listdir(mp4_folder):
@@ -164,18 +179,22 @@ def main():
 
         if choice == '1':
             download_choice = 'mp3'
+            link_playlist = None
         elif choice == '2':
             download_choice = 'mp4'
+            link_playlist = None
         elif choice == '3':
             download_choice = 'both'
+            link_playlist = None
         else:
-            print("Escolha inválida. Saindo.")
-            return
+            print("Escolha inválida. Usando a opção padrão: Apenas MP3.")
+            download_choice = 'mp3'
+            link_playlist = choice
 
-        mp3_folder, playlist_title = baixar_playlist(download_choice)
-        if mp3_folder or os.path.exists("downloads/mp3"):
-            renomear_arquivos(mp3_folder or "downloads/mp3")
-        executar_spotify(playlist_title)
+        mp3_folder, playlist_title = baixar_playlist(download_choice, link_playlist)
+        if mp3_folder:
+            renomear_arquivos(mp3_folder)
+        executar_spotify(playlist_title or "default_playlist")
     except Exception as e:
         print(f"Ocorreu um erro: {e}")
 
