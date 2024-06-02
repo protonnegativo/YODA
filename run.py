@@ -1,10 +1,10 @@
 import os
 import sys
-from pytube import Playlist
+from pytube import Playlist # type: ignore
 from tqdm import tqdm
 from mutagen.easyid3 import EasyID3
 import datetime
-from pydub import AudioSegment
+from pydub import AudioSegment # type: ignore
 from urllib.error import HTTPError
 import time
 import subprocess
