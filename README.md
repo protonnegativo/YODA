@@ -79,7 +79,10 @@ Este script é útil para baixar playlists do YouTube e importá-las para o Musi
 - [x] Adicionar suporte para baixar vídeos individuais do YouTube.
 - [x] Permitir ao usuário escolher entre baixar apenas MP3, apenas MP4 ou ambos.
 - [x] Alerta quando a chave da API do Spotify não for fornecida.
+<<<<<<< HEAD
 - [x] Inserir pasta manual para apenas buscar metadados.
+=======
+>>>>>>> e9f7d16035eaf15869269f25b40b6f67804fa81f
 - [ ] Opção de salvar configurações.
 - [ ] Adicionar opção para utilizar ou não o Spotify para adicionar metadados.
 - [ ] Documentação sobre como criar e adicionar a chave da API do Spotify.
@@ -93,5 +96,8 @@ Este script é útil para baixar playlists do YouTube e importá-las para o Musi
 
 ## Como Contribuir
 Se você tiver ideias para novos recursos ou melhorias, sinta-se à vontade para abrir uma issue ou enviar um pull request! Estou aberto a contribuições e feedback da comunidade.
+<<<<<<< HEAD
 
 #        https://www.youtube.com/playlist?list=PL3bxxpCpkx3hlJ8H5Dv8mP8SI8Szlsv-H
+=======
+>>>>>>> e9f7d16035eaf15869269f25b40b6f67804fa81f
