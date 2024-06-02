@@ -20,7 +20,6 @@ eggs/
 .eggs/
 assets/
 secret/
-downloads/
 lib/
 lib64/
 parts/
