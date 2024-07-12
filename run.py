@@ -1,14 +1,13 @@
 import os
 import sys
-from pytube import Playlist # type: ignore
+import yt_dlp as youtube_dl
 from tqdm import tqdm
 from mutagen.easyid3 import EasyID3
 import datetime
-from pydub import AudioSegment # type: ignore
-from urllib.error import HTTPError
+from pydub import AudioSegment
 import time
-import subprocess
 import re
+import subprocess
 
 # Global variable to control if spotify.py has been executed
 spotify_executado = False
@@ -17,7 +16,7 @@ spotify_executado = False
 sys.path.append(os.path.join(os.getcwd(), 'metadata'))
 
 def obter_data_publicacao(video):
-    return video.publish_date
+    return video['upload_date']
 
 def sanitize_folder_name(name):
     invalid_chars = '<>:"/\\|?*'
@@ -29,10 +28,15 @@ def create_folder_if_not_exists(folder_path):
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
 
-def download_video(video, folder):
-    video.streams.get_highest_resolution().download(output_path=folder)
-    original_file_name = video.streams.get_highest_resolution().default_filename
-    return os.path.join(folder, original_file_name)
+def download_video(video_url, folder):
+    ydl_opts = {
+        'format': 'bestvideo+bestaudio/best',
+        'outtmpl': os.path.join(folder, '%(title)s.%(ext)s'),
+    }
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(video_url, download=True)
+        original_file_name = ydl.prepare_filename(info_dict)
+    return original_file_name, info_dict
 
 def convert_to_mp3(mp4_path, mp3_folder, idx, video, playlist_title):
     try:
@@ -41,39 +45,40 @@ def convert_to_mp3(mp4_path, mp3_folder, idx, video, playlist_title):
         audio.export(mp3_path, format="mp3")
 
         data_publicacao = obter_data_publicacao(video)
-        ano_publicacao = data_publicacao.year if data_publicacao else datetime.datetime.now().year
+        ano_publicacao = data_publicacao[:4] if data_publicacao else datetime.datetime.now().year
 
         audiofile = EasyID3(mp3_path)
         audiofile['tracknumber'] = str(idx)
-        audiofile['title'] = video.title
-        audiofile['artist'] = video.author
+        audiofile['title'] = video['title']
+        audiofile['artist'] = video['uploader']
         audiofile['albumartist'] = "Powered by Proton Negativo."
-        audiofile['website'] = f"{video.watch_url}?year={ano_publicacao}"
+        audiofile['website'] = f"{video['webpage_url']}?year={ano_publicacao}"
         audiofile['album'] = playlist_title
         audiofile['date'] = str(ano_publicacao)
         audiofile.save()
     except Exception as e:
-        print(f"Erro ao converter vídeo {video.title} para MP3: {e}")
+        print(f"Erro ao converter vídeo {video['title']} para MP3: {e}")
 
-def download_and_convert_video(video, idx, mp4_folder, mp3_folder, playlist_title, download_choice, max_retries=3):
+def download_and_convert_video(video_url, idx, mp4_folder, mp3_folder, playlist_title, download_choice, max_retries=3):
     for attempt in range(max_retries):
         try:
             mp4_path = None
+            video_info = None
             if download_choice in ['mp4', 'both']:
-                mp4_path = download_video(video, mp4_folder)
-                print(f"Vídeo {video.title} baixado como MP4.")
+                mp4_path, video_info = download_video(video_url, mp4_folder)
+                print(f"Vídeo {video_info['title']} baixado como MP4.")
             if download_choice in ['mp3', 'both']:
                 if not mp4_path:
-                    mp4_path = download_video(video, mp4_folder)
-                convert_to_mp3(mp4_path, mp3_folder, idx, video, playlist_title)
+                    mp4_path, video_info = download_video(video_url, mp4_folder)
+                convert_to_mp3(mp4_path, mp3_folder, idx, video_info, playlist_title)
                 if download_choice == 'mp3':
                     os.remove(mp4_path)
-                print(f"Vídeo {video.title} convertido e baixado como MP3.")
+                print(f"Vídeo {video_info['title']} convertido e baixado como MP3.")
             break
-        except (HTTPError, OSError, Exception) as e:
-            print(f"Erro ao processar vídeo {video.title} (tentativa {attempt + 1} de {max_retries}): {e}")
+        except Exception as e:
+            print(f"Erro ao processar vídeo {video_url} (tentativa {attempt + 1} de {max_retries}): {e}")
             if attempt + 1 == max_retries:
-                print(f"Falha ao baixar o vídeo {video.title} após {max_retries} tentativas.")
+                print(f"Falha ao baixar o vídeo {video_url} após {max_retries} tentativas.")
             else:
                 time.sleep(5)
 
@@ -86,6 +91,22 @@ def list_mp3_files(directory):
     else:
         print("Nenhum arquivo MP3 encontrado.")
     return mp3_files
+
+def list_mp3_metadata(directory):
+    metadata_list = []
+    for filename in os.listdir(directory):
+        if filename.endswith('.mp3'):
+            file_path = os.path.join(directory, filename)
+            audiofile = EasyID3(file_path)
+            metadata = {
+                'filename': filename,
+                'title': audiofile.get('title', [''])[0],
+                'artist': audiofile.get('artist', [''])[0],
+                'album': audiofile.get('album', [''])[0],
+                'date': audiofile.get('date', [''])[0]
+            }
+            metadata_list.append(metadata)
+    return metadata_list
 
 def clean_file_names(directory, text_to_remove):
     for filename in os.listdir(directory):
@@ -115,8 +136,13 @@ def baixar_playlist(download_choice, link_playlist=None):
             link_playlist = None
             attempts += 1
 
-    playlist = Playlist(link_playlist)
-    playlist_title = sanitize_folder_name(playlist.title)
+    ydl_opts = {
+        'quiet': True,
+        'skip_download': True,
+    }
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        playlist = ydl.extract_info(link_playlist, download=False)
+    playlist_title = sanitize_folder_name(playlist['title'])
     download_folder = "downloads"
 
     mp3_folder = os.path.join(download_folder, f"{playlist_title} mp3")
@@ -124,9 +150,9 @@ def baixar_playlist(download_choice, link_playlist=None):
     create_folder_if_not_exists(mp3_folder)
     create_folder_if_not_exists(mp4_folder)
 
-    print(f"Baixando playlist: {playlist.title}")
-    for idx, video in enumerate(tqdm(playlist.videos, desc="Baixando vídeos"), start=1):
-        download_and_convert_video(video, idx, mp4_folder, mp3_folder, playlist_title, download_choice)
+    print(f"Baixando playlist: {playlist['title']}")
+    for idx, video in enumerate(tqdm(playlist['entries'], desc="Baixando vídeos"), start=1):
+        download_and_convert_video(video['webpage_url'], idx, mp4_folder, mp3_folder, playlist_title, download_choice)
 
     if download_choice == 'mp3':
         if os.path.exists(mp4_folder):
@@ -146,20 +172,6 @@ def baixar_playlist(download_choice, link_playlist=None):
     print("Download e conversão concluídos!")
     return mp3_folder, playlist_title
 
-def renomear_arquivos(mp3_folder):
-    while True:
-        mp3_files = list_mp3_files(mp3_folder)
-        if not mp3_files:
-            break
-
-        limpar = input("Você quer limpar algo dos nomes dos arquivos? (s/n): ").strip().lower()
-        if limpar == 's':
-            texto_a_remover = input("Digite o texto a ser removido dos nomes dos arquivos: ").strip()
-            clean_file_names(mp3_folder, texto_a_remover)
-            print("Renomeação concluída!")
-        else:
-            break
-
 def executar_spotify(playlist_title):
     global spotify_executado
     if not spotify_executado:
@@ -169,7 +181,7 @@ def executar_spotify(playlist_title):
         spotify_executado = True
         print("A função do Spotify foi executada!")
 
-def main():
+if __name__ == "__main__":
     try:
         print("Escolha uma opção de download:")
         print("1. Apenas MP3")
@@ -197,16 +209,3 @@ def main():
         executar_spotify(playlist_title or "default_playlist")
     except Exception as e:
         print(f"Ocorreu um erro: {e}")
-
-def read_keys_file(file_path):
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    abs_file_path = os.path.join(current_dir, "secret", file_path)
-    with open(abs_file_path, 'r') as file:
-        keys = file.read().strip()
-    return keys
-
-def executar_funcao():
-    print("Executando função do Spotify...")
-
-if __name__ == "__main__":
-    main()

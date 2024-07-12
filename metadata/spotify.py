@@ -30,7 +30,7 @@ def fill_metadata(file_path: str, song: 'SpotifySong', fixed_album_artist: Optio
     audiofile.tag.album = song.collection_name
     audiofile.tag.band = song.artist_name
     audiofile.tag.album_artist = album_artist
-    
+
     image_file_name = "Cover.jpg"
     image_file_path = os.path.join(os.path.dirname(file_path), image_file_name)
     download_image(song.artwork_url_100, image_file_path)
@@ -70,11 +70,15 @@ def search_song_by_file_title(file_path: str, artist: Optional[str] = None, albu
         return None
 
 def main():
-    if len(sys.argv) != 2:
-        print("Uso: python spotify.py <nome_da_playlist>")
+    if len(sys.argv) < 2:
+        print("Uso: python spotify.py <nome_da_playlist> [artist] [album] [fixed_album_artist]")
         sys.exit(1)
 
     playlist_name = sys.argv[1]
+    artist = sys.argv[2] if len(sys.argv) > 2 else None
+    album = sys.argv[3] if len(sys.argv) > 3 else None
+    fixed_album_artist = sys.argv[4] if len(sys.argv) > 4 else None
+
     script_directory = os.path.dirname(os.path.abspath(__file__))
     mp3_folder = os.path.abspath(os.path.join(script_directory, f"../downloads/{playlist_name} mp3"))
 
@@ -82,17 +86,13 @@ def main():
         print(f"Erro: O caminho '{mp3_folder}' não foi encontrado.")
         mp3_folder = input("Por favor, insira o caminho correto para a pasta contendo os arquivos MP3: ").strip()
 
-    artist = input("Digite o nome do artista (ou pressione Enter para pular): ").strip()
-    album = input("Digite o nome do álbum (ou pressione Enter para pular): ").strip()
-    fixed_album_artist = input("Digite o nome do artista do álbum fixo (ou pressione Enter para usar o nome do artista): ").strip()
-
     print("\nPreenchendo metadados dos arquivos MP3...")
     for file_name in os.listdir(mp3_folder):
         if file_name.lower().endswith(".mp3"):
             file_path = os.path.join(mp3_folder, file_name)
-            resultado = search_song_by_file_title(file_path, artist=artist if artist else None, album=album if album else None)
+            resultado = search_song_by_file_title(file_path, artist=artist, album=album)
             if resultado:
-                fill_metadata(file_path, resultado, fixed_album_artist if fixed_album_artist else None)
+                fill_metadata(file_path, resultado, fixed_album_artist=fixed_album_artist)
                 print(f"Metadados preenchidos para o arquivo: {file_name}")
             else:
                 print(f"Não foi possível encontrar metadados para o arquivo: {file_name}")
